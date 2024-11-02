@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.env
+.venv
+env/
+venv/
+ENV/
+dist/
+build/
+*.egg-info/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Cache
+.cache/
+.pytest_cache/
+
+# Docker
+.docker/
+
+# Kubernetes
+.kube/
+
+# Local development
+local_settings.py
