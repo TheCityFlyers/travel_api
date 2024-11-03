@@ -1,12 +1,45 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+from typing import List, Optional
 from .config import get_settings
 import logging
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Define request models based on documentation
+class OriginDepRequest(BaseModel):
+    date: str
+    iatA_LocationCode: str
+
+class DestArrivalRequest(BaseModel):
+    iatA_LocationCode: str
+
+class OriginDest(BaseModel):
+    origin_dep_request: OriginDepRequest
+    dest_arrival_request: DestArrivalRequest
+
+class Passenger(BaseModel):
+    pax_id: str
+    ptc: str  # ADT, CHD, or INF
+
+class TravelPreferences(BaseModel):
+    cabinCode: str
+    vendorPref: List[str] = []
+
+class ShoppingCriteria(BaseModel):
+    returnUPSellInfo: bool
+    travelPreferences: TravelPreferences
+    tripType: str  # Oneway, Return, or Multi
+
+class FlightSearchRequest(BaseModel):
+    point_of_sale: str
+    origin_dest: List[OriginDest]
+    pax: List[Passenger]
+    shopping_criteria: ShoppingCriteria
 
 app = FastAPI(
     title="Flight Search API",
@@ -32,12 +65,10 @@ async def internal_error_handler(request, exc):
 
 # Changed from /api/v1/search to just /search since we're mounted at /search/flight
 @app.post("/search")
-async def search_flights(request_data: dict):
+async def search_flights(request: FlightSearchRequest):
     try:
-        # Log the incoming request
-        logger.info(f"Received search request: {request_data}")
+        logger.info(f"Received search request: {request.dict()}")
         
-        # Get settings
         settings = get_settings()
         logger.info("Settings loaded successfully")
         
@@ -47,7 +78,7 @@ async def search_flights(request_data: dict):
         
         return {
             "message": "Search request received",
-            "request": request_data
+            "request": request.dict()
         }
         
     except Exception as e:
