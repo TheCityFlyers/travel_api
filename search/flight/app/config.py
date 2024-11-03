@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     # Bdfare settings
     bdfare_base_url: str = "https://bdf.centralindia.cloudapp.azure.com/api/enterprise"
     bdfare_api_key: str = Field(..., description="Bdfare API Key")
-    bdfare_username: str = Field(..., description="Bdfare Username")
+    #bdfare_username: str = Field(..., description="Bdfare Username")
 
     # Flyhub settings  
     flyhub_base_url: str = "https://api.flyhub.com/api/v1"
