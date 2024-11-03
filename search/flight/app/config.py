@@ -1,15 +1,23 @@
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Settings(BaseSettings):
     # Bdfare settings
-    bdfare_base_url: str = "https://bdf.centralindia.cloudapp.azure.com/api/enterprise"
+    bdfare_base_url: str = Field(
+        default="https://bdf.centralindia.cloudapp.azure.com/api/enterprise",
+        description="Bdfare base URL"
+    )
     bdfare_api_key: str = Field(..., description="Bdfare API Key")
-    #bdfare_username: str = Field(..., description="Bdfare Username")
 
     # Flyhub settings  
-    flyhub_base_url: str = "https://api.flyhub.com/api/v1"
+    flyhub_base_url: str = Field(
+        default="https://api.flyhub.com/api/v1",
+        description="Flyhub base URL"
+    )
     flyhub_api_key: str = Field(..., description="Flyhub API Key")
     flyhub_username: str = Field(..., description="Flyhub Username")
 
@@ -21,4 +29,10 @@ class Settings(BaseSettings):
 
 @lru_cache()
 def get_settings() -> Settings:
-    return Settings()
+    try:
+        settings = Settings()
+        logger.info("Settings loaded successfully")
+        return settings
+    except Exception as e:
+        logger.error(f"Error loading settings: {str(e)}")
+        raise
