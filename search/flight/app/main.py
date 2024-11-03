@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Optional
-from .config import get_settings
+import httpx
 import logging
 
 # Set up logging
@@ -68,17 +68,61 @@ async def internal_error_handler(request, exc):
 async def search_flights(request: FlightSearchRequest):
     try:
         logger.info(f"Received search request: {request.dict()}")
-        
         settings = get_settings()
-        logger.info("Settings loaded successfully")
         
-        # Log API credentials (partially masked)
-        logger.info(f"Using Bdfare API key: {settings.bdfare_api_key[:10]}...")
-        logger.info(f"Using Flyhub API key: {settings.flyhub_api_key[:10]}...")
+        # Initialize results list
+        search_results = []
         
+        # Search BDFare
+        try:
+            async with httpx.AsyncClient() as client:
+                bdfare_response = await client.post(
+                    f"{settings.bdfare_base_url}/AirShopping",
+                    headers={
+                        "Authorization": f"Bearer {settings.bdfare_api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json=request.dict()
+                )
+                if bdfare_response.status_code == 200:
+                    search_results.extend(bdfare_response.json().get("results", []))
+                    logger.info("BDFare search completed successfully")
+                else:
+                    logger.error(f"BDFare search failed: {bdfare_response.text}")
+        except Exception as e:
+            logger.error(f"Error searching BDFare: {str(e)}")
+
+        # Search Flyhub
+        try:
+            async with httpx.AsyncClient() as client:
+                flyhub_response = await client.post(
+                    f"{settings.flyhub_base_url}/AirSearch",
+                    headers={
+                        "Authorization": f"Bearer {settings.flyhub_api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "username": settings.flyhub_username,
+                        **request.dict()
+                    }
+                )
+                if flyhub_response.status_code == 200:
+                    search_results.extend(flyhub_response.json().get("results", []))
+                    logger.info("Flyhub search completed successfully")
+                else:
+                    logger.error(f"Flyhub search failed: {flyhub_response.text}")
+        except Exception as e:
+            logger.error(f"Error searching Flyhub: {str(e)}")
+
+        # Return combined results
         return {
-            "message": "Search request received",
-            "request": request.dict()
+            "status": "success",
+            "message": "Flight search completed",
+            "results": search_results,
+            "providers": {
+                "bdfare": len([r for r in search_results if r.get("provider") == "bdfare"]),
+                "flyhub": len([r for r in search_results if r.get("provider") == "flyhub"])
+            }
         }
         
     except Exception as e:
